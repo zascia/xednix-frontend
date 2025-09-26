@@ -7,21 +7,28 @@ const Dashboard = ({ accessToken, onLogout }) => {
     const [dashboardData, setDashboardData] = useState('Загрузка данных...');
 
     useEffect(() => {
-        // 1. Отправляем запрос на защищенный маршрут /dashboard
+        // Используем AbortController для отмены запроса, если компонент размонтируется
+        const controller = new AbortController();
+        const signal = controller.signal;
+
         const fetchDashboardData = async () => {
             try {
                 const response = await axios.get('http://127.0.0.1:5000/dashboard', {
                     headers: {
-                        // 2. Отправляем токен в заголовке Authorization: Bearer
                         Authorization: `Bearer ${accessToken}`,
                     },
+                    signal: signal, // Передаем сигнал для отмены запроса
                 });
                 setDashboardData(response.data.message);
             } catch (error) {
-                // Если токен недействителен или истек
+                // Игнорируем ошибку, если запрос был отменен
+                if (axios.isCancel(error) || error.name === 'AbortError') {
+                    console.log('Request aborted');
+                    return;
+                }
+
                 setDashboardData('Ошибка доступа. Ваш токен недействителен.');
                 console.error(error);
-                // Можно сразу вызвать onLogout, если ошибка 401
                 if (error.response && error.response.status === 401) {
                     onLogout();
                 }
@@ -29,7 +36,14 @@ const Dashboard = ({ accessToken, onLogout }) => {
         };
 
         fetchDashboardData();
-    }, [accessToken, onLogout]);
+
+        // Функция очистки: вызывается перед повторным вызовом useEffect
+        // или перед размонтированием компонента (когда Strict Mode его "тестирует").
+        return () => {
+            controller.abort();
+        };
+
+    }, [accessToken, onLogout]); // Зависимости ( accessToken, onLogout ) должны быть
 
     return (
         <div style={{ padding: '40px', textAlign: 'center' }}>
