@@ -1,6 +1,7 @@
 // src/components/Dashboard.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import ProfileSetupWizard from './ProfileSetupWizard';
 
 const Dashboard = ({ accessToken, onLogout }) => {
     const [dashboardData, setDashboardData] = useState('Загрузка данных...');
@@ -9,6 +10,8 @@ const Dashboard = ({ accessToken, onLogout }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [profileMode, setProfileMode] = useState('CHOICE');
+
 
     // Используем useCallback для мемоизации функции, если она нужна в зависимостях
     const fetchDashboardData = useCallback(async () => {
@@ -120,6 +123,9 @@ const Dashboard = ({ accessToken, onLogout }) => {
         }
     };
 
+    // Определяем, находится ли пользователь на этапе настройки профиля
+    const isSetupMode = profileMode !== 'SEARCH';
+
     return (
         <div style={{ padding: '40px', textAlign: 'center' }}>
             <h1>Панель управления Xednix</h1>
@@ -133,73 +139,86 @@ const Dashboard = ({ accessToken, onLogout }) => {
                 Выход
             </button>
 
-            {/* Основная логика (поиск вакансий) */}
-            <div style={{ margin: '40px 0', borderTop: '1px solid #ccc', paddingTop: '20px' }}>
-                <h2>Поиск Вакансий</h2>
+            {/* ----------------------------------------------------------------- */}
+            {/* ГЛАВНОЕ УСЛОВИЕ: НАСТРОЙКА ПРОФИЛЯ ИЛИ РЕЖИМ ПОИСКА */}
+            {/* ----------------------------------------------------------------- */}
+            {isSetupMode ? (
+                // 1. Если идет настройка профиля, показываем Визард
+                <ProfileSetupWizard
+                    profileMode={profileMode}
+                    setProfileMode={setProfileMode}
+                    accessToken={accessToken}
+                />
+            ) : (
+                // 2. Если профиль настроен (profileMode === 'SEARCH'), показываем форму поиска
+                <div style={{ margin: '40px 0', borderTop: '1px solid #ccc', paddingTop: '20px' }}>
+                    <h2>Поиск Вакансий</h2>
 
-                {/* 1. Форма поиска, привязанная к handleSearch */}
-                <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+                    {/* Форма поиска */}
+                    <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
 
-                    {/* 2. Поле ввода */}
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Введите запрос (например, Java, PM, QA)"
-                        style={{ padding: '10px', width: '300px' }}
-                    />
+                        {/* Поле ввода */}
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Введите запрос (например, Python, PM, QA)"
+                            style={{ padding: '10px', width: '300px' }}
+                        />
 
-                    {/* 3. Список ресурсов (Чекбоксы) */}
-                    <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                        {resources.map(resource => (
-                            <label key={resource.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={selectedResources.includes(resource.id)}
-                                    onChange={() => handleResourceToggle(resource.id)} // Функция выбора/снятия выбора
-                                />
-                                {resource.name}
-                            </label>
+                        {/* Список ресурсов (Чекбоксы) */}
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            {resources.map(resource => (
+                                <label key={resource.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedResources.includes(resource.id)}
+                                        onChange={() => handleResourceToggle(resource.id)}
+                                    />
+                                    {resource.name}
+                                </label>
+                            ))}
+                        </div>
+
+                        {/* Кнопка поиска */}
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            style={{ padding: '10px 30px', backgroundColor: isLoading ? '#ccc' : '#007bff', color: 'white', border: 'none' }}
+                        >
+                            {isLoading ? 'Поиск...' : 'Найти'}
+                        </button>
+                    </form>
+
+                    {/* Блок для отображения результатов */}
+                    <div style={{ marginTop: '30px', textAlign: 'left', maxWidth: '800px', margin: '30px auto' }}>
+                        <h3>Результаты ({searchResults.length})</h3>
+
+                        {/* Сообщение, если результатов нет */}
+                        {searchResults.length === 0 && !isLoading && <p>Введите запрос и нажмите "Найти".</p>}
+
+                        {/* Отображение каждой вакансии */}
+                        {searchResults.map((job, index) => (
+                            <div key={job.id || index} style={{ border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '5px' }}>
+
+                                {/* Обработка ошибки */}
+                                {job.error ? (
+                                    <p style={{ color: 'red' }}>Ошибка: {job.error}</p>
+                                ) : (
+                                    <>
+                                        {/* Ссылка на вакансию */}
+                                        <h4><a href={job.link} target="_blank" rel="noopener noreferrer">{job.title}</a></h4>
+                                        <p><strong>Компания:</strong> {job.company}</p>
+                                        <p><strong>Локация:</strong> {job.location} | <strong>ЗП:</strong> {job.salary}</p>
+                                        <p style={{ fontSize: '0.9em', color: '#666' }}>Источник: {job.source}</p>
+                                    </>
+                                )}
+                            </div>
                         ))}
                     </div>
 
-                    {/* 4. Кнопка поиска */}
-                    <button
-                        type="submit"
-                        disabled={isLoading} // Кнопка неактивна при загрузке
-                        style={{ padding: '10px 30px', backgroundColor: isLoading ? '#ccc' : '#007bff', color: 'white', border: 'none' }}
-                    >
-                        {isLoading ? 'Поиск...' : 'Найти'}
-                    </button>
-                </form>
-
-                {/* 5. Блок для отображения результатов */}
-                <div style={{ marginTop: '30px', textAlign: 'left', maxWidth: '800px', margin: '30px auto' }}>
-                    <h3>Результаты ({searchResults.length})</h3>
-
-                    {/* Сообщение, если результатов нет и нет загрузки */}
-                    {searchResults.length === 0 && !isLoading && <p>Введите запрос и нажмите "Найти".</p>}
-
-                    {/* Отображение каждой вакансии */}
-                    {searchResults.map((job, index) => (
-                        <div key={job.id || index} style={{ border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '5px' }}>
-
-                            {/* Обработка ошибки */}
-                            {job.error ? (
-                                <p style={{ color: 'red' }}>Ошибка: {job.error}</p>
-                            ) : (
-                                <>
-                                    {/* Ссылка на вакансию */}
-                                    <h4><a href={job.link} target="_blank" rel="noopener noreferrer">{job.title}</a></h4>
-                                    <p><strong>Компания:</strong> {job.company}</p>
-                                    <p><strong>Локация:</strong> {job.location} | <strong>ЗП:</strong> {job.salary}</p>
-                                    <p style={{ fontSize: '0.9em', color: '#666' }}>Источник: {job.source}</p>
-                                </>
-                            )}
-                        </div>
-                    ))}
                 </div>
-            </div>
+            )}
         </div>
     );
 };
