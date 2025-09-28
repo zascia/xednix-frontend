@@ -11,6 +11,7 @@ const Dashboard = ({ accessToken, onLogout }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [profileMode, setProfileMode] = useState('CHOICE');
+    const [userProfile, setUserProfile] = useState(null);
 
 
     // Используем useCallback для мемоизации функции, если она нужна в зависимостях
@@ -51,6 +52,30 @@ const Dashboard = ({ accessToken, onLogout }) => {
                 console.error("Error loading resources:", error);
                 // Установим заглушку в случае ошибки
                 setResources([{ id: 0, name: 'Ошибка загрузки ресурсов', is_active: false }]);
+            }
+
+            // 3. Загрузка Профиля пользователя (ТРЕТИЙ ЗАПРОС)
+            try {
+                const profileResponse = await axios.get('http://127.0.0.0:5000/api/profile', {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    signal: signal
+                });
+
+                // Если профиль найден, сохраняем его и сразу переключаем в режим поиска
+                setUserProfile(profileResponse.data);
+                setProfileMode('SEARCH');
+
+            } catch (error) {
+                // Если профиль не найден (404), оставляем режим CHOICE
+                if (error.response && error.response.status === 404) {
+                    setProfileMode('CHOICE');
+                } else if (error.response && error.response.status === 401) {
+                    onLogout();
+                } else {
+                    console.error("Error loading profile:", error);
+                    // Если была другая ошибка, также оставляем CHOICE
+                    setProfileMode('CHOICE');
+                }
             }
         };
 

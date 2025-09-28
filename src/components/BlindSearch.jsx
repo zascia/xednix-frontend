@@ -1,14 +1,16 @@
 // src/components/BlindSearch.jsx
 
 import React, { useState } from 'react';
+import axios from 'axios';
 
 const BlindSearch = ({ setProfileMode, accessToken }) => {
     // Состояния для минимального профиля
     const [role, setRole] = useState('');
     const [level, setLevel] = useState('начальный');
     const [location, setLocation] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         // ВАЛИДАЦИЯ (минимальная)
@@ -17,11 +19,33 @@ const BlindSearch = ({ setProfileMode, accessToken }) => {
             return;
         }
 
-        // 1. В реальном приложении: Отправка данных на /api/profile/blind
-        console.log(`Профиль "Слепой поиск" сохранен: Роль: ${role}, Уровень: ${level}, Локация: ${location}`);
+        setIsLoading(true);
 
-        // 2. Успех: Переключаем главный Дашборд в режим поиска
-        setProfileMode('SEARCH');
+        try {
+            // 1. Отправка данных на новый API-маршрут
+            await axios.post('http://127.0.0.1:5000/api/profile/blind',
+                {
+                    role: role,
+                    level: level,
+                    location: location
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            // 2. Успех: Переключаем главный Дашборд в режим поиска
+            setProfileMode('SEARCH');
+
+        } catch (error) {
+            console.error('Error saving blind profile:', error.response ? error.response.data : error.message);
+            alert("Не удалось сохранить профиль. Проверьте лог сервера.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -52,8 +76,12 @@ const BlindSearch = ({ setProfileMode, accessToken }) => {
                     style={{ padding: '10px' }}
                 />
 
-                <button type="submit" style={{ padding: '10px', backgroundColor: '#3498db', color: 'white', border: 'none' }}>
-                    Начать поиск
+                <button
+                    type="submit"
+                    disabled={isLoading}
+                    style={{ padding: '10px', backgroundColor: isLoading ? '#ccc' : '#3498db', color: 'white', border: 'none' }}
+                >
+                    {isLoading ? 'Сохранение...' : 'Начать поиск'}
                 </button>
             </form>
 
