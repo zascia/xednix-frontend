@@ -1,0 +1,30 @@
+graph TD
+    subgraph Инфраструктура
+        DB[PostgreSQL База данных]
+        Loki[Loki (Хранилище логов)]
+        Grafana[Grafana (Мониторинг)]
+    end
+
+    subgraph Xednix Система
+        A[Frontend (React/Vite)]
+        B[Backend API (Flask/Python)]
+    end
+
+    E[Внешний API (Jooble)]
+
+    direction LR
+
+    A -- (1) Запрос на поиск (JWT) --> B
+    B -- (2) Проверка токена --> DB
+    B -- (3) Запрос профиля / ресурсов --> DB
+    DB -- (4) Данные профиля --> B
+    B -- (5) Запрос вакансий (API Key, Query) --> E
+    E -- (6) Возвращает сырые данные --> B
+    B -- (7) Форматирование / ИИ-Матчинг --> A
+    B -- (8) Запись ошибок / активности --> Loki
+    Loki --> Grafana
+
+    style A fill:#6CC644,stroke:#3C8614,stroke-width:2px,color:#fff
+    style B fill:#3498DB,stroke:#2980B9,stroke-width:2px,color:#fff
+    style E fill:#F9A825,stroke:#EF6C00,stroke-width:2px,color:#333
+    style DB fill:#FFB8D9,stroke:#CC7AB8,stroke-width:2px,color:#333
