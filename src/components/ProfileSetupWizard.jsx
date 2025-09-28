@@ -1,9 +1,9 @@
 import React from 'react';
 import BlindSearch from './BlindSearch';
+import SkillEntry from './SkillEntry';
 
 // Импортируйте заглушки (их нужно будет перенести сюда)
 const UploadProfile = ({ setProfileMode, accessToken }) => <h1>1. Загрузка Резюме (AI)</h1>;
-const SkillEntry = ({ setProfileMode, accessToken }) => <h1>2. Ввод Навыков (Детальный)</h1>;
 
 // ------------------------------------
 
@@ -25,7 +25,11 @@ const ProfileSetupWizard = ({ profileMode, setProfileMode, accessToken, onProfil
         case 'UPLOAD':
             return <UploadProfile setProfileMode={setProfileMode} accessToken={accessToken} />;
         case 'SKILL_ENTRY':
-            return <SkillEntry setProfileMode={setProfileMode} accessToken={accessToken} />;
+            return <SkillEntry
+                setProfileMode={setProfileMode}
+                accessToken={accessToken}
+                onProfileUpdate={onProfileUpdate} // <-- ПЕРЕДАЕМ ФУНКЦИЮ
+            />;
         case 'BLIND_SEARCH':
             return <BlindSearch
                 setProfileMode={setProfileMode}
