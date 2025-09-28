@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import ProfileSetupWizard from './ProfileSetupWizard';
+import SearchDashboard from './SearchDashboard';
 
 const Dashboard = ({ accessToken, onLogout }) => {
     const [dashboardData, setDashboardData] = useState('Загрузка данных...');
@@ -56,14 +57,27 @@ const Dashboard = ({ accessToken, onLogout }) => {
 
             // 3. Загрузка Профиля пользователя (ТРЕТИЙ ЗАПРОС)
             try {
-                const profileResponse = await axios.get('http://127.0.0.0:5000/api/profile', {
+                const profileResponse = await axios.get('http://127.0.0.1:5000/api/profile', {
                     headers: { Authorization: `Bearer ${accessToken}` },
                     signal: signal
                 });
 
-                // Если профиль найден, сохраняем его и сразу переключаем в режим поиска
-                setUserProfile(profileResponse.data);
-                setProfileMode('SEARCH');
+                const profileData = profileResponse.data;
+
+                // 🔑 КЛЮЧЕВАЯ ЛОГИКА: Проверяем, есть ли настроенная роль
+                if (profileData.target_role) {
+                    // Если роль найдена (после Слепого поиска), устанавливаем режим SEARCH
+                    setUserProfile(profileData);
+                    setProfileMode('SEARCH');
+                    // Устанавливаем роль в поле ввода поиска
+                    if (profileData.target_role) {
+                        setSearchTerm(profileData.target_role);
+                    }
+
+                } else {
+                    // Профиль существует, но настройка не завершена
+                    setProfileMode('CHOICE');
+                }
 
             } catch (error) {
                 // Если профиль не найден (404), оставляем режим CHOICE
@@ -104,23 +118,33 @@ const Dashboard = ({ accessToken, onLogout }) => {
         // 1. Предотвращение стандартного поведения формы
         e.preventDefault();
 
-        // 2. Проверка ввода
-        if (!searchTerm.trim() || selectedResources.length === 0) {
-            alert("Введите запрос и выберите хотя бы один ресурс.");
+        // Определяем финальный поисковый запрос
+        let finalSearchTerm = searchTerm.trim();
+
+        // 1. Используем сохраненную роль, если поле ввода пустое
+        if (!finalSearchTerm && userProfile && userProfile.target_role) {
+            finalSearchTerm = userProfile.target_role;
+        }
+
+        if (!finalSearchTerm || selectedResources.length === 0) {
+            alert("Введите запрос или настройте профиль.");
             return;
         }
 
-        // 3. Управление загрузкой: начало
+        // 2. Управление загрузкой: начало
         setIsLoading(true);
         setSearchResults([]);
 
         try {
             // 4. Выполнение POST-запроса на защищенный маршрут
             const response = await axios.post('http://127.0.0.1:5000/api/search', {
-                // Тело запроса: данные, которые нужны бэкенду
-                searchTerm: searchTerm,
-                resourceIds: selectedResources
-            }, {
+                searchTerm: finalSearchTerm,
+                resourceIds: selectedResources,
+                // 2. ОТПРАВЛЯЕМ ЛОКАЦИЮ И УРОВЕНЬ НА БЭКЕНД для точного поиска
+                location: userProfile?.location || null,
+                level: userProfile?.target_level || null
+
+            },{
                 // Заголовок для авторизации
                 headers: {
                     Authorization: `Bearer ${accessToken}`,
@@ -148,6 +172,28 @@ const Dashboard = ({ accessToken, onLogout }) => {
         }
     };
 
+    // --- ФУНКЦИЯ СБРОСА ПРОФИЛЯ (Решает проблему возврата из SEARCH) ---
+    const handleProfileReset = () => {
+        // 1. Сброс состояния на фронтенде
+        setProfileMode('CHOICE');
+        setUserProfile(null);
+        setSearchTerm('');
+        setSearchResults([]);
+
+        // 2. В будущем: здесь можно добавить запрос к API для удаления данных из DB.
+        console.log("Profile reset locally. User is back to choice selection.");
+    };
+
+    // передается в дочерние компоненты для обновления ими профиля на главном Дашборде
+    const handleProfileUpdate = (profileData) => {
+        // 1. Обновляем состояние userProfile
+        setUserProfile(profileData);
+        // 2. Инициализируем поле поиска
+        if (profileData.target_role) {
+            setSearchTerm(profileData.target_role);
+        }
+    };
+
     // Определяем, находится ли пользователь на этапе настройки профиля
     const isSetupMode = profileMode !== 'SEARCH';
 
@@ -156,7 +202,6 @@ const Dashboard = ({ accessToken, onLogout }) => {
             <h1>Панель управления Xednix</h1>
             <p style={{ fontSize: '1.2em', color: 'darkgreen' }}>{dashboardData}</p>
 
-            {/* Кнопка выхода */}
             <button
                 onClick={onLogout}
                 style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: 'red', color: 'white', border: 'none', cursor: 'pointer' }}
@@ -164,85 +209,29 @@ const Dashboard = ({ accessToken, onLogout }) => {
                 Выход
             </button>
 
-            {/* ----------------------------------------------------------------- */}
             {/* ГЛАВНОЕ УСЛОВИЕ: НАСТРОЙКА ПРОФИЛЯ ИЛИ РЕЖИМ ПОИСКА */}
-            {/* ----------------------------------------------------------------- */}
             {isSetupMode ? (
                 // 1. Если идет настройка профиля, показываем Визард
                 <ProfileSetupWizard
                     profileMode={profileMode}
                     setProfileMode={setProfileMode}
                     accessToken={accessToken}
+                    onProfileUpdate={handleProfileUpdate}
                 />
             ) : (
-                // 2. Если профиль настроен (profileMode === 'SEARCH'), показываем форму поиска
-                <div style={{ margin: '40px 0', borderTop: '1px solid #ccc', paddingTop: '20px' }}>
-                    <h2>Поиск Вакансий</h2>
-
-                    {/* Форма поиска */}
-                    <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-
-                        {/* Поле ввода */}
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Введите запрос (например, Python, PM, QA)"
-                            style={{ padding: '10px', width: '300px' }}
-                        />
-
-                        {/* Список ресурсов (Чекбоксы) */}
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                            {resources.map(resource => (
-                                <label key={resource.id} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedResources.includes(resource.id)}
-                                        onChange={() => handleResourceToggle(resource.id)}
-                                    />
-                                    {resource.name}
-                                </label>
-                            ))}
-                        </div>
-
-                        {/* Кнопка поиска */}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            style={{ padding: '10px 30px', backgroundColor: isLoading ? '#ccc' : '#007bff', color: 'white', border: 'none' }}
-                        >
-                            {isLoading ? 'Поиск...' : 'Найти'}
-                        </button>
-                    </form>
-
-                    {/* Блок для отображения результатов */}
-                    <div style={{ marginTop: '30px', textAlign: 'left', maxWidth: '800px', margin: '30px auto' }}>
-                        <h3>Результаты ({searchResults.length})</h3>
-
-                        {/* Сообщение, если результатов нет */}
-                        {searchResults.length === 0 && !isLoading && <p>Введите запрос и нажмите "Найти".</p>}
-
-                        {/* Отображение каждой вакансии */}
-                        {searchResults.map((job, index) => (
-                            <div key={job.id || index} style={{ border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '5px' }}>
-
-                                {/* Обработка ошибки */}
-                                {job.error ? (
-                                    <p style={{ color: 'red' }}>Ошибка: {job.error}</p>
-                                ) : (
-                                    <>
-                                        {/* Ссылка на вакансию */}
-                                        <h4><a href={job.link} target="_blank" rel="noopener noreferrer">{job.title}</a></h4>
-                                        <p><strong>Компания:</strong> {job.company}</p>
-                                        <p><strong>Локация:</strong> {job.location} | <strong>ЗП:</strong> {job.salary}</p>
-                                        <p style={{ fontSize: '0.9em', color: '#666' }}>Источник: {job.source}</p>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                </div>
+                // 2. Если профиль настроен (profileMode === 'SEARCH'), показываем НОВЫЙ КОМПОНЕНТ
+                <SearchDashboard
+                    resources={resources}
+                    selectedResources={selectedResources}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    searchResults={searchResults}
+                    isLoading={isLoading}
+                    userProfile={userProfile}
+                    handleSearch={handleSearch}
+                    handleResourceToggle={handleResourceToggle}
+                    handleProfileReset={handleProfileReset} // Передаем функцию сброса
+                />
             )}
         </div>
     );

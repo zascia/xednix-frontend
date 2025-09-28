@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const BlindSearch = ({ setProfileMode, accessToken }) => {
+const BlindSearch = ({ setProfileMode, accessToken, onProfileUpdate }) => {
     // Состояния для минимального профиля
     const [role, setRole] = useState('');
     const [level, setLevel] = useState('начальный');
@@ -37,7 +37,15 @@ const BlindSearch = ({ setProfileMode, accessToken }) => {
                 }
             );
 
-            // 2. Успех: Переключаем главный Дашборд в режим поиска
+            // 2. УСПЕХ: ВЫПОЛНЯЕМ ЗАПРОС К API /api/profile ЧТОБЫ ПОЛУЧИТЬ ПОСЛЕДНИЕ ДАННЫЕ ПРОФИЛЯ
+            const profileResponse = await axios.get('http://127.0.0.1:5000/api/profile', {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            // 3. ОБНОВЛЯЕМ ПРОФИЛЬ В РОДИТЕЛЬСКОМ КОМПОНЕНТЕ
+            onProfileUpdate(profileResponse.data);
+
+            // 4. Переключаем режим
             setProfileMode('SEARCH');
 
         } catch (error) {
@@ -76,13 +84,27 @@ const BlindSearch = ({ setProfileMode, accessToken }) => {
                     style={{ padding: '10px' }}
                 />
 
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    style={{ padding: '10px', backgroundColor: isLoading ? '#ccc' : '#3498db', color: 'white', border: 'none' }}
-                >
-                    {isLoading ? 'Сохранение...' : 'Начать поиск'}
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+
+                    {/* 1. Кнопка возврата к выбору режимов */}
+                    <button
+                        onClick={() => setProfileMode('CHOICE')} // Кнопка устанавливает режим 'CHOICE'
+                        disabled={isLoading}
+                        type="button" // Важно, чтобы форма не отправлялась по клику на эту кнопку
+                        style={{ padding: '10px', backgroundColor: '#6c757d', color: 'white', border: 'none', cursor: 'pointer', flex: 1, marginRight: '10px' }}
+                    >
+                        ← Выбрать другой режим
+                    </button>
+
+                    {/* 2. Кнопка отправки формы */}
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        style={{ padding: '10px', backgroundColor: isLoading ? '#ccc' : '#3498db', color: 'white', border: 'none', flex: 1 }}
+                    >
+                        {isLoading ? 'Сохранение...' : 'Начать поиск'}
+                    </button>
+                </div>
             </form>
 
             <button onClick={() => setProfileMode('CHOICE')} style={{ marginTop: '20px', background: 'none', border: 'none', color: '#666' }}>

@@ -8,7 +8,7 @@ const SkillEntry = ({ setProfileMode, accessToken }) => <h1>2. Ввод Навы
 // ------------------------------------
 
 // Главный компонент-переключатель
-const ProfileSetupWizard = ({ profileMode, setProfileMode, accessToken }) => {
+const ProfileSetupWizard = ({ profileMode, setProfileMode, accessToken, onProfileUpdate }) => {
     switch (profileMode) {
         case 'CHOICE':
             return (
@@ -27,7 +27,11 @@ const ProfileSetupWizard = ({ profileMode, setProfileMode, accessToken }) => {
         case 'SKILL_ENTRY':
             return <SkillEntry setProfileMode={setProfileMode} accessToken={accessToken} />;
         case 'BLIND_SEARCH':
-            return <BlindSearch setProfileMode={setProfileMode} accessToken={accessToken} />;
+            return <BlindSearch
+                setProfileMode={setProfileMode}
+                accessToken={accessToken}
+                onProfileUpdate={onProfileUpdate}
+            />;
         default:
             return <p>Ошибка: Неизвестный режим профилирования.</p>;
     }
