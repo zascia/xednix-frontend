@@ -1,20 +1,20 @@
 graph TD
     subgraph Инфраструктура
-        DB[PostgreSQL База данных]
-        Loki[Loki (Хранилище логов)]
-        Grafana[Grafana (Мониторинг)]
+        DB["PostgreSQL База данных"]
+        Loki["Loki (Хранилище логов)"]
+        Grafana["Grafana (Мониторинг)"]
     end
 
     subgraph Xednix Система
-        A[Frontend (React/Vite)]
-        B[Backend API (Flask/Python)]
+        A["Frontend (React/Vite)"]
+        B["Backend API (Flask/Python)"]
     end
 
-    E[Внешний API (Jooble)]
+    E["Внешний API (Jooble)"]
 
     direction LR
 
-    A -- (1) Запрос на поиск (JWT) --> B
+    A -- (1) Запрос с JWT --> B
     B -- (2) Проверка токена --> DB
     B -- (3) Запрос профиля / ресурсов --> DB
     DB -- (4) Данные профиля --> B
