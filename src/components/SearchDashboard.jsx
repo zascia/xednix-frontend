@@ -92,9 +92,14 @@ const SearchDashboard = ({
             <div style={{ marginTop: '30px', textAlign: 'left', maxWidth: '800px', margin: '30px auto' }}>
                 <h3>Результаты ({searchResults.length})</h3>
 
-                {searchResults.length === 0 && !isLoading && <p>Введите запрос и нажмите "Найти".</p>}
+                {!isLoading && (
+                    Array.isArray(searchResults) ?
+                        searchResults.length === 0 && <p>Введите запрос и нажмите "Найти".</p>
+                        :
+                        <p style={{ color: 'red' }}>{searchResults.message || 'Ошибка: Неизвестный формат ответа сервера.'}</p>
+                )}
 
-                {searchResults.map((job, index) => (
+                {Array.isArray(searchResults) && searchResults.map((job, index) => (
                     <div key={job.id || index} style={{ border: '1px solid #eee', padding: '15px', marginBottom: '10px', borderRadius: '5px' }}>
                         {job.error ? (
                             <p style={{ color: 'red' }}>Ошибка: {job.error}</p>
