@@ -101,6 +101,9 @@ const SearchDashboard = ({
                         ) : (
                             <>
                                 <h4><a href={job.link} target="_blank" rel="noopener noreferrer">{job.title}</a></h4>
+                                <p style={{ margin: '5px 0', fontWeight: 'bold', color: job.relevance_score > 70 ? 'green' : (job.relevance_score > 30 ? 'orange' : 'red') }}>
+                                    🔥 Релевантность: {job.relevance_score || '0'}%
+                                </p>
                                 <p><strong>Компания:</strong> {job.company}</p>
                                 <p><strong>Локация:</strong> {job.location} | <strong>ЗП:</strong> {job.salary}</p>
                                 <p style={{ fontSize: '0.9em', color: '#666' }}>Источник: {job.source}</p>
