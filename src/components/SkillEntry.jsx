@@ -7,6 +7,8 @@ import axios from 'axios';
 const SkillEntry = ({ setProfileMode, accessToken, onProfileUpdate }) => {
     const [rawSkills, setRawSkills] = useState('');
     const [rawExcludedSkills, setRawExcludedSkills] = useState('');
+    const [level, setLevel] = useState('средний');
+    const [location, setLocation] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState('');
 
@@ -33,7 +35,9 @@ const SkillEntry = ({ setProfileMode, accessToken, onProfileUpdate }) => {
             // 1. Отправка данных на Бэкенд
             await axios.post('http://127.0.0.1:5000/api/profile/skills/full', {
                 skills: skillsArray,
-                excluded_skills: excludedSkillsArray // Отправка списка исключений
+                excluded_skills: excludedSkillsArray,
+                level: level,
+                location: location
             }, {
                 headers: { Authorization: `Bearer ${accessToken}` },
             });
@@ -79,6 +83,25 @@ const SkillEntry = ({ setProfileMode, accessToken, onProfileUpdate }) => {
                     placeholder="Пример: C++, Cobol, Pascal (Если вы их знаете, но не хотите, чтобы они влияли на матчинг)."
                     rows="3"
                     style={{ padding: '10px', border: '1px solid #dc3545' }}
+                    disabled={isLoading}
+                />
+                {/* ------------------------------------------- */}
+
+                <hr style={{ width: '100%', margin: '10px 0' }}/>
+
+                {/* Локация и Уровень */}
+                <select value={level} onChange={(e) => setLevel(e.target.value)} style={{ padding: '10px' }} disabled={isLoading}>
+                    <option value="all">Уровень: Все</option>
+                    <option value="начальный">Уровень: Начальный</option>
+                    <option value="средний">Уровень: Средний</option>
+                    <option value="продвинутый">Уровень: Продвинутый</option>
+                </select>
+                <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Локация (Город, Страна, Удалённо)"
+                    style={{ padding: '10px' }}
                     disabled={isLoading}
                 />
                 {/* ------------------------------------------- */}

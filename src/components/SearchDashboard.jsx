@@ -15,6 +15,22 @@ const SearchDashboard = ({
 
     // Определяем, есть ли данные профиля для визуализации
     const showProfileInfo = userProfile && userProfile.target_role;
+    const skillsList = userProfile?.skills || [];
+
+    // Извлекаем исключаемые навыки из JSON (для отображения)
+    const getExcludedSkills = () => {
+        if (userProfile?.focused_skills_data) {
+            try {
+                const data = JSON.parse(userProfile.focused_skills_data);
+                return data.excluded_skills || [];
+            } catch {
+                return [];
+            }
+        }
+        return [];
+    };
+
+    const excludedSkillsList = getExcludedSkills();
 
     return (
         <div style={{ margin: '40px 0', borderTop: '1px solid #ccc', paddingTop: '20px' }}>
@@ -28,6 +44,42 @@ const SearchDashboard = ({
             </button>
 
             <h2>Поиск Вакансий</h2>
+
+            {/* БЛОК ВИЗУАЛИЗАЦИИ ПРОФИЛЯ */}
+            {showProfileInfo && (
+                <div style={{
+                    border: '1px solid #ddd',
+                    padding: '15px',
+                    marginBottom: '20px',
+                    textAlign: 'left',
+                    borderRadius: '8px'
+                }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#007bff' }}>Ваш активный профиль:</h4>
+
+                    {/* Локация и Уровень */}
+                    <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
+                        <p style={{ margin: 0 }}>
+                            **Локация:** **{userProfile.location || 'Не указана'}**
+                        </p>
+                        <p style={{ margin: 0 }}>
+                            **Уровень:** **{userProfile.target_level || 'Не указан'}**
+                        </p>
+                    </div>
+
+                    {/* Навыки для включения (только первые 5) */}
+                    <p style={{ margin: 0, fontSize: '0.9em' }}>
+                        **Основные навыки:** {skillsList.slice(0, 5).join(', ')} {skillsList.length > 5 ? `и еще ${skillsList.length - 5}...` : ''}
+                    </p>
+
+                    {/* Навыки для исключения */}
+                    {excludedSkillsList.length > 0 && (
+                        <p style={{ margin: 0, fontSize: '0.9em', color: 'red' }}>
+                            **Исключены:** {excludedSkillsList.join(', ')}
+                        </p>
+                    )}
+                </div>
+            )}
+            {/* ------------------------------------------------------------- */}
 
             <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
 
